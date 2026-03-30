@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频分析工具 - Video Analyzer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .mode-selector {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px;
+            background: #f5f5f5;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 1.1em;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            background: #e8e8e8;
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result-section {
+            display: none;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .result-section.show {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .info-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .info-item label {
+            display: block;
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .info-item .value {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .analysis-section {
+            margin-bottom: 25px;
+        }
+
+        .analysis-section h3 {
+            color: #764ba2;
+            margin-bottom: 12px;
+            font-size: 1.3em;
+        }
+
+        .analysis-section .content {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+
+        .error-message {
+            display: none;
+            background: #ff4444;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .success-message {
+            display: none;
+            background: #00C851;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        .bulk-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-card .number {
+            font-size: 2em;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .video-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .video-card h4 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .log-console {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            color: #333;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 0.95em;
+            max-height: 500px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .log-console.show {
+            display: block;
+        }
+
+        .log-console .log-line {
+            margin: 8px 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.6;
+        }
+
+        .log-console .log-line.highlight {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .progress-bar-container {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .progress-bar-container.show {
+            display: block;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 20px;
+            overflow: visible;
+            position: relative;
+            margin-bottom: 15px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+            border-radius: 20px;
+            position: relative;
+        }
+
+        .progress-percent {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #333;
+            font-weight: bold;
+            font-size: 1.1em;
+            z-index: 10;
+            text-shadow: 0 0 3px rgba(255, 255, 255, 0.8);
+        }
+
+        .progress-text {
+            color: #667eea;
+            text-align: center;
+            font-weight: 600;
+            font-size: 1em;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .bulk-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 视频分析工具</h1>
+            <p>AI驱动的短视频爆款分析平台</p>
+        </div>
+
+        <div class="mode-selector">
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('single')">
+                    📹 单个视频分析
+                </div>
+                <div class="tab" onclick="switchTab('bulk')">
+                    🔍 批量关键词分析
+                </div>
+            </div>
+
+            <!-- 单个视频分析 -->
+            <div id="single-tab" class="tab-content active">
+                <div class="input-group">
+                    <label>输入视频链接</label>
+                    <input type="text" id="single-url" placeholder="粘贴 TikTok / Instagram Reel / YouTube Short 链接">
+                </div>
+                <button class="btn" onclick="analyzeSingle()">开始分析</button>
+                
+                <div id="single-loading" class="loading">
+                    <div class="spinner"></div>
+                    <p>正在分析视频，请稍候...</p>
+                </div>
+                
+                <div id="single-error" class="error-message"></div>
+                <div id="single-success" class="success-message"></div>
+            </div>
+
+            <!-- 批量关键词分析 -->
+            <div id="bulk-tab" class="tab-content">
+                <div class="input-group">
+                    <label>输入关键词或话题标签</label>
+                    <input type="text" id="bulk-keyword" placeholder="例如: fashion, 时尚穿搭, viral">
+                </div>
+                <button class="btn" onclick="analyzeBulk()">开始批量分析</button>
+                
+                <div id="bulk-loading" class="loading">
+                    <div class="spinner"></div>
+                    <p>正在爬取和分析视频，这可能需要几分钟...</p>
+                </div>
+                
+                <div class="progress-bar-container" id="bulk-progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="bulk-progress-fill" style="width: 0%"></div>
+                        <div class="progress-percent" id="bulk-progress-percent">0%</div>
+                    </div>
+                    <div class="progress-text" id="bulk-progress-text">Initializing...</div>
+                </div>
+                
+                <div class="log-console" id="bulk-log-console"></div>
+                
+                <div id="bulk-error" class="error-message"></div>
+                <div id="bulk-success" class="success-message"></div>
+            </div>
+        </div>
+
+        <!-- 单个视频结果 -->
+        <div id="single-result" class="result-section">
+            <h2>📊 分析结果</h2>
+            
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>平台</label>
+                    <div class="value" id="result-platform">-</div>
+                </div>
+                <div class="info-item">
+                    <label>创作者</label>
+                    <div class="value" id="result-creator">-</div>
+                </div>
+                <div class="info-item">
+                    <label>时长</label>
+                    <div class="value" id="result-duration">-</div>
+                </div>
+                <div class="info-item">
+                    <label>点赞数</label>
+                    <div class="value" id="result-likes">-</div>
+                </div>
+                <div class="info-item">
+                    <label>评论数</label>
+                    <div class="value" id="result-comments">-</div>
+                </div>
+                <div class="info-item">
+                    <label>分享数</label>
+                    <div class="value" id="result-shares">-</div>
+                </div>
+            </div>
+
+            <div class="analysis-section">
+                <h3>🔥 爆款原因分析</h3>
+                <div class="content" id="result-viral"></div>
+            </div>
+
+            <div class="analysis-section">
+                <h3>🎥 镜头语言分析</h3>
+                <div class="content" id="result-lens"></div>
+            </div>
+
+            <div class="analysis-section">
+                <h3>🤖 AI重现提示词</h3>
+                <div class="content" id="result-prompt"></div>
+            </div>
+        </div>
+
+        <!-- 批量分析结果 -->
+        <div id="bulk-result" class="result-section">
+            <h2>📊 批量分析结果</h2>
+            
+            <div class="bulk-stats">
+                <div class="stat-card">
+                    <div class="number" id="bulk-total">0</div>
+                    <div class="label">爬取总数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number" id="bulk-new">0</div>
+                    <div class="label">新增分析</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number" id="bulk-duplicates">0</div>
+                    <div class="label">重复跳过</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number" id="bulk-failed">0</div>
+                    <div class="label">失败数</div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px;">
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 1.5em; font-weight: 700; color: #667eea;" id="bulk-tiktok">0</div>
+                    <div style="color: #666;">TikTok</div>
+                </div>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 1.5em; font-weight: 700; color: #764ba2;" id="bulk-instagram">0</div>
+                    <div style="color: #666;">Instagram</div>
+                </div>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 1.5em; font-weight: 700; color: #FF0000;" id="bulk-youtube">0</div>
+                    <div style="color: #666;">YouTube</div>
+                </div>
+            </div>
+
+            <div id="bulk-videos"></div>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tab) {
+            // 切换标签样式
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+            
+            if (tab === 'single') {
+                document.querySelectorAll('.tab')[0].classList.add('active');
+                document.getElementById('single-tab').classList.add('active');
+            } else {
+                document.querySelectorAll('.tab')[1].classList.add('active');
+                document.getElementById('bulk-tab').classList.add('active');
+            }
+
+            // 隐藏结果
+            document.getElementById('single-result').classList.remove('show');
+            document.getElementById('bulk-result').classList.remove('show');
+        }
+
+        async function analyzeSingle() {
+            const url = document.getElementById('single-url').value.trim();
+            const loading = document.getElementById('single-loading');
+            const error = document.getElementById('single-error');
+            const success = document.getElementById('single-success');
+            const result = document.getElementById('single-result');
+
+            // 重置状态
+            loading.classList.remove('show');
+            error.classList.remove('show');
+            success.classList.remove('show');
+            result.classList.remove('show');
+
+            if (!url) {
+                error.textContent = '请输入视频链接';
+                error.classList.add('show');
+                return;
+            }
+
+            loading.classList.add('show');
+
+            try {
+                const response = await fetch('/api/analyze-single', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url })
+                });
+
+                const data = await response.json();
+                loading.classList.remove('show');
+
+                if (data.success) {
+                    // 显示结果
+                    displaySingleResult(data.info, data.analysis);
+                    success.textContent = '✅ 分析完成！';
+                    success.classList.add('show');
+                } else {
+                    error.textContent = data.error || '分析失败';
+                    error.classList.add('show');
+                }
+            } catch (e) {
+                loading.classList.remove('show');
+                error.textContent = '网络错误: ' + e.message;
+                error.classList.add('show');
+            }
+        }
+
+        function displaySingleResult(info, analysis) {
+            document.getElementById('result-platform').textContent = info.platform || '-';
+            document.getElementById('result-creator').textContent = info.creator || '-';
+            document.getElementById('result-duration').textContent = info.duration || '-';
+            document.getElementById('result-likes').textContent = info.likes || '-';
+            document.getElementById('result-comments').textContent = info.comments || '-';
+            document.getElementById('result-shares').textContent = info.shares || '-';
+            
+            document.getElementById('result-viral').textContent = analysis.viral || '-';
+            document.getElementById('result-lens').textContent = analysis.lens || '-';
+            document.getElementById('result-prompt').textContent = analysis.prompt || '-';
+
+            document.getElementById('single-result').classList.add('show');
+        }
+
+        async function analyzeBulk() {
+            const keyword = document.getElementById('bulk-keyword').value.trim();
+            const loading = document.getElementById('bulk-loading');
+            const error = document.getElementById('bulk-error');
+            const success = document.getElementById('bulk-success');
+            const result = document.getElementById('bulk-result');
+            const logConsole = document.getElementById('bulk-log-console');
+            const progressContainer = document.getElementById('bulk-progress-container');
+            const progressFill = document.getElementById('bulk-progress-fill');
+            const progressPercent = document.getElementById('bulk-progress-percent');
+            const progressText = document.getElementById('bulk-progress-text');
+
+            // 重置状态
+            loading.classList.remove('show');
+            error.classList.remove('show');
+            success.classList.remove('show');
+            result.classList.remove('show');
+            logConsole.classList.remove('show');
+            progressContainer.classList.remove('show');
+            logConsole.innerHTML = '';
+
+            if (!keyword) {
+                error.textContent = '请输入关键词或话题标签';
+                error.classList.add('show');
+                return;
+            }
+
+            loading.classList.add('show');
+            logConsole.classList.add('show');
+            progressContainer.classList.add('show');
+            
+            let totalVideos = 0;
+            let currentVideo = 0;
+
+            try {
+                const response = await fetch('/api/analyze-bulk', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ keyword })
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop();
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = JSON.parse(line.substring(6));
+                            
+                            if (data.type === 'log') {
+                                const message = data.message;
+                                
+                                // Add log message
+                                const logLine = document.createElement('div');
+                                logLine.className = 'log-line';
+                                
+                                // Highlight important messages
+                                if (message.includes('STARTING BULK ANALYSIS') || 
+                                    message.includes('VIDEO') || 
+                                    message.includes('COMPLETE') ||
+                                    message.includes('Scraping')) {
+                                    logLine.classList.add('highlight');
+                                }
+                                
+                                logLine.textContent = message;
+                                logConsole.appendChild(logLine);
+                                logConsole.scrollTop = logConsole.scrollHeight;
+
+                                // Extract total videos count
+                                const totalMatch = message.match(/STARTING BULK ANALYSIS:\s*(\d+)\s*TOTAL VIDEOS/);
+                                if (totalMatch) {
+                                    totalVideos = parseInt(totalMatch[1]);
+                                    progressText.textContent = `0% complete (0/${totalVideos} videos analyzed)`;
+                                }
+                                
+                                // Update progress when "Done:" appears
+                                if (message.startsWith('Done:') || message.includes('DUPLICATE - Skipping')) {
+                                    currentVideo++;
+                                    const percent = Math.round((currentVideo / totalVideos) * 100);
+                                    
+                                    progressFill.style.width = percent + '%';
+                                    progressPercent.textContent = percent + '%';
+                                    progressText.textContent = `${percent}% complete (${currentVideo}/${totalVideos} videos analyzed)`;
+                                }
+                            } else if (data.type === 'complete') {
+                                // Analysis complete
+                                loading.classList.remove('show');
+                                displayBulkResult(data.results);
+                                success.textContent = `✅ 批量分析完成！共分析 ${data.results.stats.new} 个新视频`;
+                                success.classList.add('show');
+                                
+                                // Set progress to 100%
+                                progressFill.style.width = '100%';
+                                progressPercent.textContent = '100%';
+                                progressText.textContent = `100% complete (${data.results.stats.total} videos analyzed)`;
+                            } else if (data.type === 'error') {
+                                loading.classList.remove('show');
+                                error.textContent = data.error || '批量分析失败';
+                                error.classList.add('show');
+                            }
+                        }
+                    }
+                }
+
+            } catch (e) {
+                loading.classList.remove('show');
+                error.textContent = '网络错误: ' + e.message;
+                error.classList.add('show');
+            }
+        }
+
+        function displayBulkResult(results) {
+            document.getElementById('bulk-total').textContent = results.stats.total;
+            document.getElementById('bulk-new').textContent = results.stats.new;
+            document.getElementById('bulk-duplicates').textContent = results.stats.duplicates;
+            document.getElementById('bulk-failed').textContent = results.stats.failed;
+            
+            // 显示各平台爬取数量
+            document.getElementById('bulk-tiktok').textContent = results.stats.tiktok_count || 0;
+            document.getElementById('bulk-instagram').textContent = results.stats.instagram_count || 0;
+            document.getElementById('bulk-youtube').textContent = results.stats.youtube_count || 0;
+
+            const videosContainer = document.getElementById('bulk-videos');
+            videosContainer.innerHTML = '';
+
+            if (results.videos.length === 0) {
+                videosContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">没有爬取到任何视频</div>';
+                document.getElementById('bulk-result').classList.add('show');
+                return;
+            }
+
+            // 按平台分组显示
+            const platforms = {
+                'tiktok': [],
+                'instagram': [],
+                'youtube': []
+            };
+
+            results.videos.forEach(video => {
+                const platform = video.info.platform;
+                if (platforms[platform]) {
+                    platforms[platform].push(video);
+                }
+            });
+
+            // 显示调试信息
+            const debugInfo = document.createElement('div');
+            debugInfo.style.cssText = 'background: #f0f0f0; padding: 20px; border-radius: 10px; margin-bottom: 30px; font-family: monospace;';
+            debugInfo.innerHTML = `
+                <h3 style="margin-top: 0; color: #333;">📋 批量分析详情</h3>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px;">
+                    <div>
+                        <strong>TikTok:</strong><br>
+                        爬取: ${results.stats.tiktok_count} 个<br>
+                        结果: ${platforms.tiktok.length} 个
+                    </div>
+                    <div>
+                        <strong>Instagram:</strong><br>
+                        爬取: ${results.stats.instagram_count} 个<br>
+                        结果: ${platforms.instagram.length} 个
+                    </div>
+                    <div>
+                        <strong>YouTube:</strong><br>
+                        爬取: ${results.stats.youtube_count} 个<br>
+                        结果: ${platforms.youtube.length} 个
+                    </div>
+                </div>
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ccc;">
+                    总爬取: ${results.stats.total} | 
+                    新增: <span style="color: #00C851; font-weight: bold;">${results.stats.new}</span> | 
+                    重复: <span style="color: #FFA500; font-weight: bold;">${results.stats.duplicates}</span> | 
+                    失败: <span style="color: #FF4444; font-weight: bold;">${results.stats.failed}</span>
+                </div>
+            `;
+            videosContainer.appendChild(debugInfo);
+            ['tiktok', 'instagram', 'youtube'].forEach(platform => {
+                const platformVideos = platforms[platform];
+                if (platformVideos.length === 0) return;
+
+                const platformTitle = document.createElement('h3');
+                platformTitle.style.cssText = 'color: #667eea; margin: 30px 0 15px 0; font-size: 1.4em; border-bottom: 2px solid #667eea; padding-bottom: 10px;';
+                platformTitle.innerHTML = `📱 ${platform.toUpperCase()} (${platformVideos.length} 个视频)`;
+                videosContainer.appendChild(platformTitle);
+
+                platformVideos.forEach((video, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'video-card';
+                    
+                    // 根据状态设置不同的边框颜色
+                    let borderColor = '#667eea';  // 默认蓝色
+                    let statusBadge = '';
+                    
+                    if (video.is_duplicate) {
+                        borderColor = '#FFA500';  // 橙色表示重复
+                        statusBadge = '<span style="background: #FFA500; color: white; padding: 3px 10px; border-radius: 5px; font-size: 0.85em; margin-left: 10px;">重复</span>';
+                    } else if (video.is_failed) {
+                        borderColor = '#FF4444';  // 红色表示失败
+                        statusBadge = '<span style="background: #FF4444; color: white; padding: 3px 10px; border-radius: 5px; font-size: 0.85em; margin-left: 10px;">失败</span>';
+                    } else {
+                        statusBadge = '<span style="background: #00C851; color: white; padding: 3px 10px; border-radius: 5px; font-size: 0.85em; margin-left: 10px;">成功</span>';
+                    }
+                    
+                    card.style.borderLeftColor = borderColor;
+                    
+                    card.innerHTML = `
+                        <h4>视频 ${index + 1} - ${video.info.platform} - ${video.info.creator} ${statusBadge}</h4>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <label>时长</label>
+                                <div class="value">${video.info.duration}</div>
+                            </div>
+                            <div class="info-item">
+                                <label>点赞</label>
+                                <div class="value">${video.info.likes}</div>
+                            </div>
+                            <div class="info-item">
+                                <label>评论</label>
+                                <div class="value">${video.info.comments}</div>
+                            </div>
+                            <div class="info-item">
+                                <label>分享</label>
+                                <div class="value">${video.info.shares}</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <strong>链接:</strong> <a href="${video.info.url}" target="_blank" style="color: #667eea;">${video.info.url.substring(0, 80)}...</a>
+                        </div>
+                        ${video.info.caption && video.info.caption !== '-' ? `
+                        <div style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                            <strong>标题:</strong> ${video.info.caption.substring(0, 150)}${video.info.caption.length > 150 ? '...' : ''}
+                        </div>
+                        ` : ''}
+                    `;
+                    videosContainer.appendChild(card);
+                });
+            });
+
+            document.getElementById('bulk-result').classList.add('show');
+        }
+    </script>
+</body>
+</html>

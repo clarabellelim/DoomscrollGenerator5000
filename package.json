@@ -1,0 +1,16 @@
+{
+  "name": "video-viral-analyzer",
+  "version": "1.0.0",
+  "description": "AI-powered short video viral analyzer - TikTok, Instagram Reels, YouTube Shorts",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "postinstall": "npx playwright install chromium"
+  },
+  "dependencies": {
+    "electron": "^32.0.0",
+    "@anthropic-ai/sdk": "^0.32.0",
+    "playwright": "^1.50.0",
+    "exceljs": "^4.4.0"
+  }
+}
